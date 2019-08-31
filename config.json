@@ -1,6 +1,6 @@
 {
-    "dut_file": "",  
-    "dut_name": "",
+    "dut_file": "verilogsrc/counter.sv",  
+    "dut_name": "counter",
     "waveform_format": "vcd",
 
     "probe": [ "sig1", "sig2", "sig3"]
