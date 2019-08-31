@@ -1,41 +1,66 @@
+//imports dut that was compiled with verilator wrapped with N-API. All top level signals are accessible via this import
 const dut = require('../build/Release/dut.node');
+//Sim manages tasks and advances time
+//RisingEdge/FallingEdge - wait under rising/falling edge detect on a given signal
 const {Sim, SimUtils, RisingEdge, RisingEdges, FallingEdge, FallingEdges, Edge, Edges, Interfaces} = require('signalflip-js');
-const { Clock } = SimUtils;
-const {Elastic} = Interfaces;
+const { Clock, Intf } = SimUtils;
+//A nice to have utililty to deal with arrays
 const _ = require('lodash');
-
-const jsc = require('jsverify');
-const assert = require('assert');
 
 let sim;
 
-describe('Basic Group', () => {
-    let setup = (name) => {
-	// set up the environment
-	dut.init(name); // Init dut
-	sim = new Sim(dut, dut.eval);
+describe('Test', () => {
+  let setup = (name) => {
+    // set up the environment
+    dut.init(name); // Init dut
+    sim = new Sim(dut);
 
-	// TODO: Create clock
-	//let clk = new Clock(dut.clk, 1)
-	//sim.addClock(clk)
+    // TODO: Create clock
+    let clk = new Clock(dut.clk, 1)
+    sim.addClock(clk)
 
-	// TODO: Add setup code (interfaces, transaction, ...) etc...
+    // Init input signals
+    dut.rstf(0);
+    dut.en(0);
+    
+    // RESET task -- assert reset for 5 clock cycles
+    sim.addTask(function* () {
+      dut.rstf(0);
+      yield* RisingEdges(dut.clk, 5);
+      dut.rstf(1);
+      yield* RisingEdge(dut.clk);
+    }(), 'RESET');
 
-	// TODO: Add post_run tasks (test checking)
-	// sim.addTask(() => { /* post_run function */}, 'POST_RUN'});
+    // TODO: Add post_run tasks (test checking)
+    // sim.addTask(() => { /* post_run function */}, 'POST_RUN'});
 
-    };
-    it('test1', function () {
-	this.timeout(10000); // Set timeout to expected run time of the test in ms
-	let t = jsc.forall(jsc.constant(0), function () {
-	    setup('top');
-	    // TODO: customize txn, randomizer, set variables/signals
-	    
-	    sim.run(1000); //run for 1000 ticks
-	    return true;
-	});
-	const props = {size: 2000, tests: 200}; //, rngState: "" }; // <- add this parameter to run the test with the seed that caused the error
-	jsc.check(t, props);
-    });
+  };
+  it('Test 1', function () {
+    this.timeout(10000); // Set timeout to expected run time of the test in ms
+    setup('top_test1');
+    function* drive() {
+      dut.en(1);
+      yield* RisingEdges(dut.clk, 10);
+      dut.en(0);
+    }
+    sim.addTask(drive());
+    // Run simulation for 50 ticks
+    sim.run(50); //run for 50 ticks
+  });
+
+  it('Test 2', function () {
+    this.timeout(10000);
+    setup('top_test2');
+    function* drive() {
+      dut.en(1);
+      yield* RisingEdges(dut.clk, 5);
+      dut.en(0);
+      yield* RisingEdges(dut.clk, 5);
+      dut.en(1);
+    }
+    sim.addTask(drive());
+    // Run simulaltion for 50 ticks
+    sim.run(50); //run for 50 ticks
+  });
 });
 
